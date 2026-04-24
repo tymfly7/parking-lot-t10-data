@@ -9,7 +9,7 @@ camera_config = picam2.create_still_configuration({"size" : (3200, 1800)})
 picam2.configure(camera_config)
 picam2.start()
 sleep(2)
-n = 80
+n = 150
 
 folder_name = datetime.now().strftime('%Y-%m-%d')
 folder_name = "../DATA/" + folder_name

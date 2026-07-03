@@ -1,0 +1,9 @@
+path: ~/parking-lot-t10/t10lot_labeled/crops_yolo_detect   # dataset root (~ expands to home dir)
+train: images/train
+val:   images/val
+test:  images/test
+
+nc: 2
+names:
+  0: vacant
+  1: occupied

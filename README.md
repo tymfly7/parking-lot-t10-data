@@ -2,19 +2,23 @@
 
 A labeled, real-world parking-lot dataset captured from a single fixed camera
 overlooking **parking lot T10** on the campus of **Brno University of Technology
-(BUT)** in Brno, Czech Republic. Frames were collected across many days at 10 minutes period and times of
-day (varying light, weather and occupancy) and hand-organized into occupancy labels.
+(BUT)** in Brno, Czech Republic. Frames were collected across many days at a
+10-minute period and across times of day (varying light, weather and occupancy)
+and hand-organized into occupancy labels.
 
-It is intended as a compact, PKLot-style benchmark for Deep CNN Machine Learning training datasets to detect and classify parking lot occupancy. Dataset were labeled for both CNN classifier models and YOLO object dection. 
+On top of these raw captures, this repository adds ready-to-train labels: the
+parking bays are cropped and labeled in a PKLot-style layout for CNN classifiers,
+and the full frames are annotated for YOLO object detection, then cleaned and
+split for training.
 
 The dataset ships in ready-to-train form:
 
-- **Classification** — cropped images in PKLOT-style intended for **CNN** such as MobileNet format with `vacant` / `occupied`
+- **Classification** - cropped images in PKLOT-style intended for **CNN** such as MobileNet format with `vacant` / `occupied`
   (`t10lot_labeled/crops_classifiers/`)
-- **Detection** — full frames in **YOLO** format with `vacant` / `occupied` boxes
+- **Detection** - full frames in **YOLO** format with `vacant` / `occupied` boxes
   (`t10lot_labeled/crops_yolo_detect/`)
 
-- **Raw captures** — the original timestamped frames the labels are derived from
+- **Raw captures** - the original timestamped frames the labels are derived from
   (`DATA/`)
 
 ---
@@ -22,16 +26,16 @@ The dataset ships in ready-to-train form:
 ## Source & attribution
 
 - **Site:** parking lot **T10**, Brno University of Technology (BUT), Brno, Czech Republic
-- **Capture:** a single fixed Raspberry Pi camera on the BUT campus, one still every
-  10 minutes during daylight hours (see [`PYTHON/camera.py`](PYTHON/camera.py))
-- **Authors / maintainers:**
- **Main:**    Tomáš Fryža (Brno University of Technology) 
-**Labeling:** tymfly7 ([github](https://github.com/tymfly7))
+- **Capture:** a single fixed Raspberry Pi camera on the BUT campus, one still roughly
+  every 10 minutes, from early morning through the day into the evening, across a range
+  of light, weather and occupancy (see [`PYTHON/camera.py`](PYTHON/camera.py))
+- **Original dataset:** Kuzela (BUT thesis), captured on parking lot T10
+- **Maintainer / expansion:** Tomáš Fryža (Brno University of Technology)
+- **Labeling & ML packaging:** tymfly7 ([github](https://github.com/tymfly7))
+- **License:** [MIT](LICENSE) - © 2026 Tomáš Fryža
 
-- **License:** [MIT](LICENSE) — © 2026 Tomáš Fryža
-
-If you use this dataset in academic work, please credit **Brno University of Technology**
-and the author, and link back to this repository.
+If you use this dataset, please credit **Brno University of Technology** and the
+original thesis by **Kuzela**, and link back to this repository.
 
 ---
 
@@ -39,8 +43,8 @@ and the author, and link back to this repository.
 
 | Dataset | Task | Samples | Classes |
 |---|---|---|---|
-| `t10lot_labeled/crops_classifiers/` | Classification (per slot) | **97,209** crops — 61,057 occupied · 36,152 vacant | `occupied`, `vacant` |
-| `t10lot_labeled/crops_yolo_detect/` | Detection (full frame) | **3,137** frames — 2,195 train · 470 val · 472 test | `vacant` (0), `occupied` (1) |
+| `t10lot_labeled/crops_classifiers/` | Classification (per slot) | **97,209** crops - 61,057 occupied · 36,152 vacant | `occupied`, `vacant` |
+| `t10lot_labeled/crops_yolo_detect/` | Detection (full frame) | **3,137** frames - 2,195 train · 470 val · 472 test | `vacant` (0), `occupied` (1) |
 | `DATA/` | Raw source frames | **3,336** timestamped `.jpg` across **48** capture days | — |
 
 Both labeled datasets are derived from the same source captures held in `DATA/`, so a
@@ -89,7 +93,7 @@ as-is. If your checkout lives elsewhere, edit `path` in `dataset.yaml` to match.
 
 Each file under `crops_classifiers/occupied/` or `crops_classifiers/vacant/` is a single
 parking slot cropped from a full frame using its annotated polygon. The folder name
-**is** the label — a PKLot-style layout ready for a `torchvision` `ImageFolder` loader
+**is** the label - a PKLot-style layout ready for a `torchvision` `ImageFolder` loader
 and CNN backbones such as MobileNet.
 
 ```python
@@ -152,7 +156,7 @@ current day's folder.
 
 ## Annotation format
 
-- **`t10lot_labeled/crops_classifiers/{occupied,vacant}/`** — classification labels
+- **`t10lot_labeled/crops_classifiers/{occupied,vacant}/`** - classification labels
   encoded by folder name (one crop per file).
-- **`t10lot_labeled/crops_yolo_detect/labels/**/*.txt`** — YOLO labels, one file per
+- **`t10lot_labeled/crops_yolo_detect/labels/**/*.txt`** - YOLO labels, one file per
   image, one `class cx cy w h` row per annotated parking space.

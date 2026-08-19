@@ -1,0 +1,5 @@
+path: ~/parking-lot-t10/t10lot_labeled/vehicle_yolo_detect   # dataset root (~ expands to home dir)
+train: images/train
+val: images/val
+nc: 1
+names: [vehicle]

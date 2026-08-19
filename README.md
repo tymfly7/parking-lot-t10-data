@@ -15,8 +15,10 @@ The dataset ships in ready-to-train form:
 
 - **Classification** - cropped images in PKLOT-style intended for **CNN** such as MobileNet format with `vacant` / `occupied`
   (`t10lot_labeled/crops_classifiers/`)
-- **Detection** - full frames in **YOLO** format with `vacant` / `occupied` boxes
-  (`t10lot_labeled/crops_yolo_detect/`)
+- **Bay occupancy detection** - full frames in **YOLO** format with one box per parking
+  bay, labeled `vacant` / `occupied` (`t10lot_labeled/crops_yolo_detect/`)
+- **Vehicle detection** - full frames in **YOLO** format with one box per vehicle, a
+  single `vehicle` class (`t10lot_labeled/vehicle_yolo_detect/`)
 
 - **Raw captures** - the original timestamped frames the labels are derived from
   (`DATA/`)
@@ -44,11 +46,18 @@ original thesis by **Kuzela**, and link back to this repository.
 | Dataset | Task | Samples | Classes |
 |---|---|---|---|
 | `t10lot_labeled/crops_classifiers/` | Classification (per slot) | **97,209** crops - 61,057 occupied · 36,152 vacant | `occupied`, `vacant` |
-| `t10lot_labeled/crops_yolo_detect/` | Detection (full frame) | **3,137** frames - 2,195 train · 470 val · 472 test | `vacant` (0), `occupied` (1) |
+| `t10lot_labeled/crops_yolo_detect/` | Bay occupancy detection (full frame) | **3,137** frames - 2,195 train · 470 val · 472 test | `vacant` (0), `occupied` (1) |
+| `t10lot_labeled/vehicle_yolo_detect/` | Vehicle detection (full frame) | **190** frames - 149 train · 41 val | `vehicle` (0) |
 | `DATA/` | Raw source frames | **3,336** timestamped `.jpg` across **48** capture days | — |
 
-Both labeled datasets are derived from the same source captures held in `DATA/`, so a
+All three labeled datasets are derived from the same source captures held in `DATA/`, so a
 detection frame and the classification crops taken from it are consistent.
+
+The two detection datasets are labeled for different tasks. `crops_yolo_detect/` boxes
+the parking bays and labels the state of each one. A single model trained on it returns
+both the bay positions and the occupancy. `vehicle_yolo_detect/` boxes the vehicles and
+carries no bay labels. Occupancy from it requires intersecting the boxes with a known
+bay layout.
 
 ---
 
@@ -66,10 +75,15 @@ parking-lot-t10-data/
 │   ├── crops_classifiers/           #   classification dataset (per-slot crops)
 │   │   ├── occupied/  *.jpg          #     61,057 cropped slots
 │   │   └── vacant/    *.jpg          #     36,152 cropped slots
-│   └── crops_yolo_detect/           #   detection dataset (YOLO)
-│       ├── dataset.yaml             #     Ultralytics data config (nc=2)
-│       ├── images/{train,val,test}/ #     3,137 frames, split 2195/470/472
-│       └── labels/{train,val,test}/ #     one .txt per image (YOLO format)
+│   ├── crops_yolo_detect/           #   bay occupancy detection dataset (YOLO)
+│   │   ├── dataset.yaml             #     Ultralytics data config (nc=2)
+│   │   ├── images/{train,val,test}/ #     3,137 frames, split 2195/470/472
+│   │   └── labels/{train,val,test}/ #     one .txt per image (YOLO format)
+│   └── vehicle_yolo_detect/         #   vehicle detection dataset (YOLO)
+│       ├── dataset.yaml             #     Ultralytics data config (nc=1)
+│       ├── README.md                #     provenance, excluded frames, split
+│       ├── images/{train,val}/      #     190 frames, split 149/41 by capture day
+│       └── labels/{train,val}/      #     one .txt per image (YOLO format)
 ├── LICENSE
 └── README.md
 ```
@@ -111,11 +125,17 @@ ds = datasets.ImageFolder(root, transform=tf)
 
 ---
 
-## Detection dataset (`t10lot_labeled/crops_yolo_detect/`)
+## Bay occupancy detection dataset (`t10lot_labeled/crops_yolo_detect/`)
 
 Standard [Ultralytics YOLO](https://docs.ultralytics.com/datasets/detect/) layout:
 each image has a matching `.txt` label file with one row per box:
 `class cx cy w h` (normalized 0–1). Classes: `0 = vacant`, `1 = occupied`.
+
+Each box covers a parking bay, not a vehicle. A model trained here proposes the bays
+and classifies the state of each one in a single pass. That is an alternative to a
+fixed bay layout combined with a per-crop classifier. Vehicles parked outside the
+marked bays are not labeled and will not be detected. For vehicle boxes, use
+`vehicle_yolo_detect/` below.
 
 `dataset.yaml`:
 
@@ -141,6 +161,38 @@ yolo detect train model=yolo11n.pt data=~/parking-lot-t10/t10lot_labeled/crops_y
 
 ---
 
+## Vehicle detection dataset (`t10lot_labeled/vehicle_yolo_detect/`)
+
+The same Ultralytics layout with a single class, `0 = vehicle`. Each box covers a
+vehicle anywhere in the frame. There are no bay boxes and no occupancy labels.
+
+200 frames were sampled from `DATA/`, pre-labeled with stock COCO YOLO weights and
+corrected by hand in [makesense.ai](https://www.makesense.ai/). Ten night frames were
+dropped because the annotator could not see the vehicles in them. Six empty daylight
+lots were kept with empty label files as negatives. That leaves 190 frames. The split
+is by capture day, not by frame. No day contributes to both train and val. The
+dataset's own
+[`README.md`](t10lot_labeled/vehicle_yolo_detect/README.md) lists the excluded frames
+and the day assignment in full.
+
+`dataset.yaml`:
+
+```yaml
+path: ~/parking-lot-t10/t10lot_labeled/vehicle_yolo_detect   # ~ expands to your home dir
+train: images/train
+val: images/val
+nc: 1
+names: [vehicle]
+```
+
+**Train:**
+
+```bash
+yolo detect train model=yolo11n.pt data=~/parking-lot-t10/t10lot_labeled/vehicle_yolo_detect/dataset.yaml imgsz=640 epochs=100
+```
+
+---
+
 ## Raw captures (`DATA/`)
 
 The `DATA/` tree holds the original frames straight from the camera, grouped into one
@@ -160,3 +212,6 @@ current day's folder.
   encoded by folder name (one crop per file).
 - **`t10lot_labeled/crops_yolo_detect/labels/**/*.txt`** - YOLO labels, one file per
   image, one `class cx cy w h` row per annotated parking space.
+- **`t10lot_labeled/vehicle_yolo_detect/labels/**/*.txt`** - YOLO labels, one file per
+  image, one `0 cx cy w h` row per vehicle. An empty file is a frame with no vehicle
+  in it and is kept on purpose.
